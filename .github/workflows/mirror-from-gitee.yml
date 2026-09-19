@@ -5,16 +5,16 @@ on:
     - cron: '0 0 * * *'
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   mirror:
     runs-on: ubuntu-latest
     steps:
       - name: 从 Gitee 镜像克隆并推到 GitHub
+        env:
+          GH_USER: ${{ github.repository_owner }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           set -e
           git clone --mirror https://gitee.com/peach_moon/chem_project.git repo.git
           cd repo.git
-          git push --mirror https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/taoyaoyue/ChemProject.git
+          git push --mirror https://${GH_USER}:${GH_TOKEN}@github.com/taoyaoyue/ChemProject.git
