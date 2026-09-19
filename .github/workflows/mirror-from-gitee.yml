@@ -17,4 +17,6 @@ jobs:
           set -e
           git clone --mirror https://gitee.com/peach_moon/chem_project.git repo.git
           cd repo.git
-          git push --mirror https://${GH_USER}:${GH_TOKEN}@github.com/taoyaoyue/ChemProject.git
+          git push --force https://${GH_USER}:${GH_TOKEN}@github.com/taoyaoyue/ChemProject.git \
+            "refs/heads/*:refs/heads/*" \
+            "refs/tags/*:refs/tags/*"
