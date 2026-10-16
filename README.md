@@ -168,11 +168,11 @@ jupyter notebook
 
 | 数据文件                        | 描述                         |
 | --------------------------- | -------------------------- |
-| **DH/data/test.xlsx**       | DH 模块的原始测试数据集              |
-| TDT/data/test.xlsx          | TDT 模块的原始测试数据集             |
-| **TDT/data/fixed.xlsx**     | TDT 模块去重后再修复 SMILES 的测试数据集 |
-| TDT/data/random.xlsx        | TDT 模块随机化后的测试数据集           |
-| TDT/data/unique_random.xlsx | TDT 模块随机化后再去重的测试数据集        |
+| **DH/data/test.xlsx**       | DH 模块的原始数据集              |
+| TDT/data/test.xlsx          | TDT 模块的原始数据集             |
+| **TDT/data/fixed.xlsx**     | TDT 模块去重后再修复 SMILES 的数据集 |
+| TDT/data/random.xlsx        | TDT 模块随机化后的数据集           |
+| TDT/data/unique_random.xlsx | TDT 模块随机化后再去重的数据集        |
 
 注：加粗的为最终使用的数据集。
 
