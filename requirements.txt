@@ -1,0 +1,22 @@
+#环境：Python 3.11（实测 3.11.15；环境名叫什么无所谓，conda / venv 都行）
+#装：pip install -r requirements.txt（已装过的包会被跳过，不会升降级）
+#
+#1) 只跑数据清洗（TDT/notebook/data_prep）—— 下面 6 个就够
+pandas>=2.0
+numpy>=1.24
+scipy>=1.10
+scikit-learn>=1.3
+rdkit>=2023.9
+openpyxl>=3.1
+
+#2) 跑建模（DH/notebook、TDT/notebook/modeling）—— 再加这几个
+#   注意：代码里 import mordred 装的是 mordredcommunity；import skfp 装的是 scikit-fingerprints
+mordredcommunity>=2.0.6
+scikit-fingerprints>=1.0
+xgboost>=2.0
+pygad>=3.2
+joblib>=1.3
+matplotlib>=3.7
+
+#3) xTB 不是 pip 包：只有"从零重算几何 / BDE"才需要
+#   到 https://github.com/grimme-lab/xtb/releases 下对应平台的包，再把路径设给环境变量 CHEM_XTB

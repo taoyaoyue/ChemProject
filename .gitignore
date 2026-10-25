@@ -136,3 +136,6 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# notebook 产物（数据清洗 notebook 会写到 TDT/out/）
+TDT/out/
