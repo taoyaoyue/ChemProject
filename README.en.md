@@ -1,8 +1,14 @@
-# Chem Project — QSAR for Energetic Materials (DH / TDT)
+# Chem Project — QSAR for Energetic Materials (Heat of Detonation DH / Thermal Decomposition Temperature TDT)
 
-Predict two properties from molecular structure (SMILES): **heat of detonation Q (cal/g, n = 88)** and **thermal decomposition temperature Td (°C, main table 1426 rows; modeling uses the first 713)**.
+Predict two properties from molecular structure (SMILES):
+
+1. heat of detonation Q (cal/g, n = 88)
+
+2. thermal decomposition temperature Td (°C, main table 1426 rows)
 
 Stack: RDKit (parsing, 3D conformers), Mordred (2D descriptors), xTB GFN2 (geometry optimization / WBO / BDE), scikit-learn + XGBoost (modeling), pyGAD (GA feature selection).
+
+> English mirror of `README.md` (as of 2026-10-26). If the two ever disagree, the Chinese `README.md` is authoritative.
 
 ---
 
@@ -102,7 +108,9 @@ $env:CHEM_XTB      = "D:\xtb\bin\xtb.exe"      # only for recomputation
 
 ### 1.7 Versions I tested (for reference only — no need to match)
 
-Versions that worked on my machine on 2026-10-24. `requirements.txt` only sets lower bounds, it does not pin this combination.
+The table below lists the versions that worked on my machine on 2026-10-24.
+
+`requirements.txt` only sets lower bounds; it does not pin this combination.
 
 | Package | Tested version |
 |---|---|
@@ -123,38 +131,59 @@ Versions that worked on my machine on 2026-10-24. `requirements.txt` only sets l
 ## 2. Reproduce the data-cleaning results (repo only)
 
 ### Inputs (all inside the repo)
+
 - `TDT/data/fixed.xlsx`: main table, 1426 rows, two columns `Td(°C)` / `SMILES`
-- `TDT/data/source/`: the datasets of the two source papers (`datasetwithheader.csv` 1022 rows, `Td_zcy.csv` 886 rows)
+- `TDT/data/source/`: raw tables of the two source papers (`datasetwithheader.csv` 1022 rows, `Td_zcy.csv` 886 rows)
 
 ### Steps
-1. Open `TDT/notebook/data_prep/fixed_provenance.ipynb` and run all
-   → writes `TDT/out/fixed_去10行_带来源.xlsx` (3 sheets; the row count in the name follows the actual exclusions)
-2. Open `TDT/notebook/data_prep/source_vs_td.ipynb` and run all (it reads step 1's output)
+
+1. Open `TDT/notebook/data_prep/fixed_provenance.ipynb` → Run All
+   → writes `TDT/out/fixed_去10行_带来源.xlsx` (3 sheets; the row count in the filename `去N行` follows the actual number of exclusions)
+2. Open `TDT/notebook/data_prep/source_vs_td.ipynb` → Run All (it reads step 1's output)
    → writes `TDT/out/实验组别与Td关系.xlsx` (5 sheets)
 
-**With `git clone`, no path editing is needed**: each notebook walks up from its own directory to the repository root and takes every path from `config.py`.
+**If you got the repo with `git clone`, no path editing is needed**: each notebook walks up from its own directory, finds the repository root, then does `import config`; every path comes from `config.py`.
 
-> ⚠️ But note which marker these two notebooks look for: `fixed_provenance` / `source_vs_td` walk up looking for **`.git`**, not `config.py` (only `unique` and the 5 notebooks under `modeling/` look for `config.py`).
-> So: **`git clone` → both run as-is; a downloaded ZIP (no `.git`) → these two climb to the drive root and fail with `ModuleNotFoundError: No module named 'config'`**. Fix: change `.git` to `config.py` in cell 2 of those two notebooks.
+> ⚠️ Note which "repo root marker" these two notebooks accept: **`.git`**, not `config.py` (only `unique` and the 5 notebooks under `modeling/` accept `config.py`).
+> So: **repo obtained via `git clone` → both notebooks run as-is; a downloaded ZIP (no `.git`) → these two climb all the way to the drive root and then fail with `ModuleNotFoundError: No module named 'config'`.** Fix: change `.git` to `config.py` in cell 2 of those two notebooks.
 
 ### What you should see if it worked
 
-| Check | Expected |
+Each of the two notebooks has its own set of checkpoints; **finish notebook 1 before starting notebook 2**. Both tables matching = reproduction succeeded.
+
+#### Notebook 1 `fixed_provenance.ipynb`: provenance + exclusion
+
+| Checkpoint | Expected |
 |---|---|
-| Rows | 1426 → **1416** (10 removed: no traceable source) |
-| Source split (1416 rows) | 2025 only: **560**; 2023 only: **450**; both: **406** |
-| Source group vs Td | Pearson r = **+0.1614** (n = 1010, p = 2.5e-07); η² = **1.88%** |
-| After controlling composition | mean residual difference **+2.20 °C**, permutation p ≈ **0.50** → not significant; the gap is explained by molecular composition, not by different measurements |
+| Tables read (`fixed ... \| A ... \| B ...`) | `fixed (1426, 2)`, A `(1022, 4)`, B `(886, 2)` |
+| Parse failures (`无法解析： ...`) | `fixed 0 \| A 0 \| B 0`; anything other than 0 means local RDKit cannot read some SMILES and the source split below will shift accordingly |
+| Source split (`来源` value_counts) | `-1`: 10, `0`: 560, `1`: 450, `2`: 406 (0 = 2025 only, 1 = 2023 only, 2 = both papers) |
+| Rows to drop (`要剔 N 行`) | **10 rows**, with `剔除原因` all equal to "source = A, InChIKey changed after SMILES repair so matching failed" (i.e. after the SMILES repair neither source table matches) |
+| Rows kept (`剔 10 → 保留 N`) | 1426 − 10 = **1416** |
+| Td conflicts between the two papers (`... 条，其中 \|差\|>5： ...`) | **106 rows**, of which only **34** have `\|Δ\|>5` |
 
-Sheets in the outputs:
+`fixed_去10行_带来源.xlsx` has 3 sheets:
 
-| Sheet | Content |
+`fixed_去10行带来源`, `剔除的10行`, and `两篇温度冲突`.
+
+#### Notebook 2 `source_vs_td.ipynb`: source group vs Td
+
+| Checkpoint | Expected |
 |---|---|
-| `fixed_去10行带来源` | 1416-row main table, 8 columns: `Td(°C)` / `SMILES` + `来源` + `A_2025_Td` / `B_2023_Td` + `Td与A一致` / `Td与B一致` + `主表新编号` |
-| `剔除的10行` | 10 rows × 9 columns: `原行号(1起)` / `原0起下标` + removal reason + **the directory to exclude** (`fixed` row i ↔ `parent_{i:04d}`, one-to-one) |
-| `两篇温度冲突` | 106 rows; only 34 of them are real conflicts (\|Δ\|>5) |
+| Which product it read (`读： ...`) | `读： fixed_去10行_带来源.xlsx` (the `去N行` in the filename follows the exclusion count from the previous step) |
+| Sample size | `n = 1416` (three groups); when comparing the "2025 only / 2023 only" pair, `n = 1010` (560 + 450, minus the 406 present in both papers) |
+| Composition descriptor shape (`描述符维度 ...`) | `(1416, 13)` (7 functional-group types + heavy atom count / ring count / molecular weight / C, N, O counts) |
+| Binary group vs Td (Q1) | `观测 r = +0.1614`, `p(公式) = 2.523e-07`, `置换 p = 0.000000`; the observed value falls **outside** the random-permutation range `[-0.1373, +0.1307]` |
+| Three groups vs Td (Q1) | `η²(观测) = 0.0188` → the group explains only **1.88%** of the Td variance; ANOVA p = 1.525e-06 |
+| Residuals after controlling composition (Q2) | `RF 5 折 CV R² = 0.411`, `两组残差均值差 = +2.20 °C`, `置换 p = 0.5030` → **not significant**; the gap is explained by molecular composition, not by the measurement method |
 
-> Provenance only answers "which paper each row comes from, which rows to drop, and where the two papers disagree". **Source-vs-Td correlation, η² and the composition-controlled residual test all live in `source_vs_td.ipynb`** — the two notebooks do not duplicate each other.
+`实验组别与Td关系.xlsx` has 5 sheets:
+
+`汇总`, `各组Td分布`, `置换落点分布`, `Q1与Q2对照`, and `两篇分子组成对比`.
+
+> Provenance only answers "which paper each row comes from, which rows to drop, where the two papers disagree" (notebook 1); **the source-vs-Td correlation, η² and the composition-controlled residual test all live in `source_vs_td.ipynb`** (notebook 2).
+>
+> The numbers above are **measured readings re-run on the 1416-row basis on 2026-10-26**. If you switch numpy / sklearn versions the last decimals may move while the magnitudes do not — trust the `汇总` sheet printed by notebook 2.
 
 ---
 
@@ -162,31 +191,40 @@ Sheets in the outputs:
 
 ### 3.1 DH (heat of detonation): repo only
 
-`DH/notebook/RandomForestRegressor.ipynb` → 10-fold CV, **R² = 0.791 ± 0.059, RMSE 171.0, MAE 132.9** (n = 88); plus Murcko-scaffold 8:2 hold-out **R² = 0.787**.
-(`DataSelector.ipynb` = feature selection + GA, `XGBoost.ipynb` = another model; optional.)
+`DH/notebook/RandomForestRegressor.ipynb` →
 
-### 3.2 TDT (Td): needs two directories outside the repo
+10-fold CV, **R² = 0.791 ± 0.059, RMSE 171.0, MAE 132.9** (n = 88);
 
-Too large to commit; point to them with environment variables:
+plus Murcko-scaffold 8:2 hold-out **R² = 0.787**.
+
+(`DataSelector.ipynb` is feature selection + GA, `XGBoost.ipynb` is another model; run them on demand.)
+
+### 3.2 TDT (Td): needs the two directories outside the repo
+
+These two directories are too large to commit; point to them with environment variables:
 
 | Directory | Contents | Environment variable |
 |---|---|---|
-| `Parents/` | 1426 `parent_XXXX/` folders, each with `conf.xyz` (xTB-optimized geometry) and `wbo` | `CHEM_PARENTS` |
-| `xtb_work/BDE/` | one `BDE_{i:04d}/` per molecule with the single-point json of three bond types | `CHEM_XTB_WORK` |
+| `Parents/` | 1426 `parent_XXXX/` folders, each with `conf.xyz` (xTB-optimized 3D geometry) and `wbo` | `CHEM_PARENTS` |
+| `xtb_work/BDE/` | one `BDE_{i:04d}/` per molecule, holding the single-point json of three bond types (C-/N-/O-NO₂) | `CHEM_XTB_WORK` |
 
 ```powershell
 $env:CHEM_PARENTS  = "D:\Parents"
 $env:CHEM_XTB_WORK = "D:\xtb_work"
 ```
 
-Then run `TDT/notebook/modeling/test.ipynb`: reads `fixed.xlsx[0:713]` (713 rows) → 45 Mordred descriptors + `max_wbo` + 3 BDEs = 49 features → XGBoost → 10-fold CV.
+Then run `TDT/notebook/modeling/test.ipynb`: it reads the first 713 rows of `fixed.xlsx` (you can adjust how many molecules are taken with `BEGIN` and `END` in cell 2) → 45 Mordred descriptors + `max_wbo` + 3 BDEs = 49 dimensions → XGBoost → 10-fold CV.
 
-Expected: **R² = 0.630 ± 0.044, RMSE 40.4 °C, MAE 30.4 °C** (10-fold CV, n = 713); plus Murcko-scaffold 8:2 hold-out **R² = 0.554**.
+Expected with all 713 molecules:
 
-> - `modeling/data_selector.ipynb`: feature filtering + GA on a 426-row subset; optional, GA is slow.
-> - `modeling/3D_try.ipynb` / `BDE_Producer.ipynb`: recompute geometries / BDE from scratch; needs the xTB binary (`CHEM_XTB`) and takes days. Usually not needed.
+ **R² = 0.630 ± 0.044, RMSE 40.4 °C, MAE 30.4 °C** (10-fold CV, n = 713);
 
-> All numbers above were **measured with the code of this repository on 2026-10-24** (16 threads), not copied from a report. If you change the feature list or hyper-parameters, trust what the notebook prints.
+plus Murcko-scaffold 8:2 hold-out **R² = 0.554**.
+
+> - `modeling/data_selector.ipynb`: feature selection + GA (426-row subset), optional, the GA is slow.
+> - `modeling/3D_try.ipynb` / `BDE_Producer.ipynb`: recompute geometries / BDE from scratch; needs the xTB binary (`CHEM_XTB`) and takes hours; usually not needed.
+
+> All metrics in the two sections above are outputs **measured on 2026-10-24 with the code of this repository** (16 threads on my machine). If you change the feature columns or hyper-parameters, trust what the notebook actually prints.
 
 ---
 
@@ -194,31 +232,31 @@ Expected: **R² = 0.630 ± 0.044, RMSE 40.4 °C, MAE 30.4 °C** (10-fold CV, n =
 
 ```
 chem_project/
-├── config.py                    # the only place paths live
+├── config.py                    # the single exit point for paths (change paths only here)
 ├── requirements.txt
-├── DH/                          # heat of detonation (repo only)
+├── DH/                          # heat of detonation module (repo only)
 │   ├── data/test.xlsx           # 88 rows
 │   └── notebook/                # DataSelector / RandomForest / XGBoost / contrast / test
-└── TDT/                         # thermal decomposition temperature
+└── TDT/                         # thermal decomposition temperature module
     ├── data/
-    │   ├── fixed.xlsx           # main table, 1426 rows (Td(°C) + SMILES)
+    │   ├── fixed.xlsx           # main table, 1426 rows (two columns: Td(°C) + SMILES)
     │   ├── test.xlsx            # raw 1504
     │   ├── random.xlsx          # randomized 1504
     │   ├── unique_random.xlsx   # deduplicated 1435
-    │   └── source/              # raw tables of the two source papers
+    │   └── source/              # raw tables of the two source papers (for provenance)
     ├── notebook/
-    │   ├── data_prep/           # cleaning: unique / fixed_provenance / source_vs_td
+    │   ├── data_prep/           # data cleaning & checks: unique / fixed_provenance / source_vs_td
     │   └── modeling/            # 3D_try / BDE_Producer / data_selector / test
     └── out/                     # notebook outputs (gitignored, created on run)
 ```
 
-Data cleaning and modeling are kept apart: `data_prep/` runs from the repository alone, `modeling/` needs the 3D geometries and xTB.
+Data cleaning and modeling live in separate directories: `data_prep/` runs from a plain repo checkout, `modeling/` needs the 3D geometries outside the repo plus xTB.
 
 ---
 
 ## 5. Paths (`config.py`)
 
-TDT notebooks never hard-code absolute paths; they `import config` (**the 5 DH notebooks are the exception**: they read data via `Path.cwd().parent / "data" / "test.xlsx"` and do not import `config`, so open them from `DH/notebook`):
+Notebooks never hard-code absolute paths; when they need a path they `import config` (**the 5 DH notebooks are the exception**: they take data via `Path.cwd().parent / "data" / "test.xlsx"` and do not import `config`, so open them from the `DH/notebook` directory):
 
 | Variable | Meaning | Environment override |
 |---|---|---|
@@ -227,9 +265,9 @@ TDT notebooks never hard-code absolute paths; they `import config` (**the 5 DH n
 | `config.OUT` | output directory, default `TDT/out/` | `CHEM_OUT` |
 | `config.PARENTS` | outside: directory holding `parent_XXXX/conf.xyz` | `CHEM_PARENTS` |
 | `config.XTB` | outside: `xtb.exe` | `CHEM_XTB` |
-| `config.XTB_WORK` | outside: working directory for BDE calculation | `CHEM_XTB_WORK` |
+| `config.XTB_WORK` | outside: BDE calculation working directory | `CHEM_XTB_WORK` |
 
-Run `python config.py` at the repository root: it prints whether every path exists on this machine. Do that first on a new machine.
+Run `python config.py` at the repository root: it prints, one by one, whether every path exists on this machine — run it first when you move to a new machine.
 
 ---
 
@@ -237,19 +275,20 @@ Run `python config.py` at the repository root: it prints whether every path exis
 
 | File | Notes |
 |---|---|
-| **`TDT/data/fixed.xlsx`** | **main table**: 1426 rows, after deduplication + SMILES repair + Td-conflict removal; 2 Td values corrected on 2026-10-24 (see below) |
-| `TDT/data/unique_random.xlsx` | previous step: 1435 rows |
-| `TDT/data/random.xlsx` | raw 1504 rows, shuffled (with original indices) |
+| **`TDT/data/fixed.xlsx`** | **main table**: 1426 rows, after deduplication + SMILES repair + Td-conflict removal. Two Td values were corrected on 2026-10-24 (see below) |
+| `TDT/data/unique_random.xlsx` | the step before the main table: 1435 rows |
+| `TDT/data/random.xlsx` | raw 1504 rows after random shuffling (with original indices) |
 | `TDT/data/test.xlsx` | raw 1504 rows |
-| `TDT/data/source/*.csv` | raw tables of the two source papers (A: 2025; B: 2023) |
+| `TDT/data/source/*.csv` | raw tables of the two source papers (A is the 2025 paper, B is the 2023 batch) |
 
-> **2026-10-24 correction**: Td of **0-based rows 87 and 434** in `fixed.xlsx` (= `parent_0087` / `parent_0434`, i.e. Excel rows 89 and 436) was changed from 334.1 / 221.0 back to **324.5 / 257.0**.
-> Reason: dataset A (the 2025 paper) contains the same compound twice (one copy drawn as a radical form), and the cleaning kept the copy with the wrong temperature.
-> Full trace: `TDT/notebook/data_prep/fixed_provenance.ipynb`, section 6.
+> **2026-10-24 correction**: the Td of **0-based rows 87 and 434** in `fixed.xlsx` (= `parent_0087` / `parent_0434`, i.e. Excel rows 89 and 436) was changed from 334.1 / 221.0 back to **324.5 / 257.0**.
+> Reason: paper A (the 2025 one) records the same compound twice (one copy drawn as a radical form), and the cleaning kept the copy with the wrong temperature;
+> full trace in `TDT/notebook/data_prep/fixed_provenance.ipynb`, section 6.
 
-⚠️ Do not mix up the two:
-- **1426 rows = main table**, used for modeling.
-- **1416 rows (`fixed_去10行_带来源.xlsx`) = auxiliary table**, only for per-source stratification / provenance. Do not substitute it for the main table.
+⚠️ Do not mix up the two bases:
+
+- **1426 rows = main table**: this is what modeling uses.
+- **1416 rows (`fixed_去10行_带来源.xlsx`) = auxiliary table**: only for per-source stratification / provenance statistics; do not substitute it for the main table.
 
 ---
 
@@ -257,11 +296,11 @@ Run `python config.py` at the repository root: it prints whether every path exis
 
 | Symptom | Cause / fix |
 |---|---|
-| `ModuleNotFoundError: No module named 'config'` | the notebook was copied out of the repo; open it inside the repo. If it happens in the two `data_prep/` notebooks, it is usually a downloaded ZIP (no `.git`) → see the ⚠️ note in section 2 |
+| `ModuleNotFoundError: No module named 'config'` | the notebook was copied out of the repo; open it inside the repo. If it shows up in the two `data_prep/` notebooks, it is most likely a downloaded ZIP (no `.git`) → see the ⚠️ note in section 2 |
 | `FileNotFoundError: ... fixed_去*行_带来源.xlsx` | run `data_prep/fixed_provenance.ipynb` first (section 2, step 1) |
-| `parent_0012` / `BDE_0012` not found | `CHEM_PARENTS` / `CHEM_XTB_WORK` not set or pointing elsewhere |
-| Where are the outputs? | `TDT/out/` by default; set `CHEM_OUT` to change it (before `import config`) |
-| Check the paths | run `python config.py` at the repository root |
+| `parent_0012` / `BDE_0012` not found | `CHEM_PARENTS` / `CHEM_XTB_WORK` not set or pointing at the wrong directory |
+| Where are the outputs? | `TDT/out/` by default; set `CHEM_OUT` to change it (the environment variable must be set before `import config`) |
+| Want to confirm the paths | run `python config.py` at the repository root |
 
 ---
 
